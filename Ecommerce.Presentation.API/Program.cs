@@ -1,13 +1,4 @@
 using Ecommerce.Application.Contracts;
-using Ecommerce.Application.Mapper;
-using Ecommerce.Application.Service;
-using Ecommerce.Application.Services;
-using Ecommerce.Application.Services.ServicesCategories;
-using Ecommerce.Context;
-using Ecommerce.Infrastructure;
-using Ecommerce.Infrastructure.Categories;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Ecommerce.Application.Contracts.Categories;
 using Ecommerce.Application.Contracts.FavortandRateRepo;
 using Ecommerce.Application.Contracts.product_Facillity;
@@ -19,30 +10,24 @@ using Ecommerce.Application.Services.Product_Facility;
 using Ecommerce.Application.Services.ServicesCategories;
 using Ecommerce.Application.ServicesO;
 using Ecommerce.Context;
+using Ecommerce.CQRS.Features.Product.Query.Handler;
 using Ecommerce.Infrastructure;
 using Ecommerce.Infrastructure.Categories;
 using Ecommerce.Infrastructure.FavortandRate;
 using Ecommerce.Infrastructure.Product_Faciity;
 using Ecommerce.Models;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Identity.Abstractions;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.Resource;
-using System.Globalization;
-using Microsoft.AspNetCore.Mvc;
-using Ecommerce.DTOs.PayPalDTOs;
+using System.Reflection;
 namespace Ecommerce.Presentation.API
 {
     public class Program
     {
         public static void Main(string[] args)
-        { 
+        {
 
             var builder = WebApplication.CreateBuilder(args);
-          
+
             builder.Services.AddScoped<ICategoryService, CategoryServices>();
             builder.Services.AddScoped<ICategoryReposatiry, CategoryRepository>();
 
@@ -115,8 +100,8 @@ namespace Ecommerce.Presentation.API
             builder.Services.AddScoped<IPaymentService, Paymentservice>();
             builder.Services.AddScoped<IPaymentRepoistory, PaymentRepository>();
 
-            builder.Services.AddScoped<IFavoriteServices,FavoriteServices>();
-            builder.Services.AddScoped<IFavoriteRepository,FavoriteRepository>();
+            builder.Services.AddScoped<IFavoriteServices, FavoriteServices>();
+            builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
 
             builder.Services.AddScoped<IRateRepository, RateRepository>();
             builder.Services.AddScoped<IRateServices, RateServices>();
@@ -124,10 +109,19 @@ namespace Ecommerce.Presentation.API
             builder.Services.AddAutoMapper(typeof(AutoMapperProfile));
 
             builder.Services.AddIdentity<Customer, IdentityRole>
-              (options => {
+              (options =>
+              {
                   options.SignIn.RequireConfirmedAccount = false;
               }).AddEntityFrameworkStores<EcommerceContext>()
               .AddDefaultTokenProviders();
+
+            builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblies(
+      typeof(ProductHandler).Assembly,
+      Assembly.GetExecutingAssembly() // For the API layer
+  ));
+
+
+
 
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
@@ -144,14 +138,14 @@ namespace Ecommerce.Presentation.API
                     policy.AllowAnyHeader()
                            .AllowAnyOrigin()
                            .AllowAnyMethod();
-                        
-                        
+
+
                 });
             });
 
             builder.Services.AddHttpClient();
 
-          
+
             builder.Services.AddControllers();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
@@ -162,11 +156,11 @@ namespace Ecommerce.Presentation.API
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
-               
+
                 app.UseSwaggerUI();
             }
 
-          
+
 
             app.UseHttpsRedirection();
             app.UseAuthentication();
